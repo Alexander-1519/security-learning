@@ -1,31 +1,32 @@
 package com.example.securitylearning.security;
 
-import com.example.securitylearning.entity.UserPermission;
-import com.example.securitylearning.entity.UserRole;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.util.concurrent.TimeUnit;
-
-import static com.example.securitylearning.entity.UserPermission.COURSE_WRITE;
-import static com.example.securitylearning.entity.UserRole.*;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
+
+    private final UserDetailsService userDetailsService;
+    private final PasswordEncoder passwordEncoder;
+
+    @Autowired
+    public SecurityConfig(UserDetailsService userDetailsService,
+                          PasswordEncoder passwordEncoder) {
+        this.userDetailsService = userDetailsService;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -52,39 +53,44 @@ public class SecurityConfig {
                     .logoutSuccessUrl("/login")
                     .invalidateHttpSession(true)
                     .clearAuthentication(true)
-                    .deleteCookies("remember-me", "JSESSIONID");
+                    .deleteCookies("remember-me", "JSESSIONID")
+                .and()
+                    .authenticationProvider(daoAuthenticationProvider());
 
         return http.build();
     }
 
+//    @Bean
+//    public UserDetailsService userDetailsService() {
+//        UserDetails user = User.builder()
+//                .username("alexander")
+//                .password(passwordEncoder().encode("password"))
+////                .roles(UserRole.STUDENT.name())
+//                .authorities(STUDENT.getGrantedAuthority())
+//                .build();
+//
+//        UserDetails admin = User.builder()
+//                .username("admin")
+//                .password(passwordEncoder().encode("admin"))
+////                .roles(ADMIN.name())
+//                .authorities(ADMIN.getGrantedAuthority())
+//                .build();
+//
+//        UserDetails adminTrainee = User.builder()
+//                .username("adminTrainee")
+//                .password(passwordEncoder().encode("adminTrainee"))
+////                .roles(ADMIN_TRAINEE.name())
+//                .authorities(ADMIN_TRAINEE.getGrantedAuthority())
+//                .build();
+//
+//        return new InMemoryUserDetailsManager(user, admin, adminTrainee);
+//    }
+
     @Bean
-    public UserDetailsService userDetailsService() {
-        UserDetails user = User.builder()
-                .username("alexander")
-                .password(passwordEncoder().encode("password"))
-//                .roles(UserRole.STUDENT.name())
-                .authorities(STUDENT.getGrantedAuthority())
-                .build();
-
-        UserDetails admin = User.builder()
-                .username("admin")
-                .password(passwordEncoder().encode("admin"))
-//                .roles(ADMIN.name())
-                .authorities(ADMIN.getGrantedAuthority())
-                .build();
-
-        UserDetails adminTrainee = User.builder()
-                .username("adminTrainee")
-                .password(passwordEncoder().encode("adminTrainee"))
-//                .roles(ADMIN_TRAINEE.name())
-                .authorities(ADMIN_TRAINEE.getGrantedAuthority())
-                .build();
-
-        return new InMemoryUserDetailsManager(user, admin, adminTrainee);
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    public DaoAuthenticationProvider daoAuthenticationProvider() {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+        provider.setPasswordEncoder(passwordEncoder);
+        provider.setUserDetailsService(userDetailsService);
+        return provider;
     }
 }
